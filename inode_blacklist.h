@@ -1,14 +1,16 @@
-#ifndef __INODE_BLACKLIST_H
-#define __INODE_BLACKLIST_H
+#ifndef __KSTAT_BLACKLIST_H
+#define __KSTAT_BLACKLIST_H
 
-int inode_blacklist_init(void);
+#include <linux/stat.h>
 
-int inode_blacklist_init_populate(u64 *inodes, u64 length);
+int kstat_blacklist_init(void);
 
-void inode_blacklist_destroy(void);
+int kstat_blacklist_init_populate(struct kstat *blacklist, u64 length);
 
-int inode_blacklist_populate(u64 *inodes, u64 length);
+void kstat_blacklist_destroy(void);
 
-bool is_inode_blacklisted(u64 *inode);
+int kstat_blacklist_populate(struct kstat *blacklist, u64 length);
+
+bool is_kstat_blacklisted(struct kstat *stat);
 
 #endif

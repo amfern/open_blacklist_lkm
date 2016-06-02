@@ -15,38 +15,31 @@ MODULE_LICENSE("GPL");
 /*     return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino); */
 /* } */
 
-u64 blaclisted_inodes[] = {
-	655368,
-	655372,
-	655369,
-	656747,
-	655373,
-	655374,
-	655371,
-	655370,
-	655375,
-	656232
-};
+struct kstat blacklisted_stats[] = {};
+
+// TODO: blacklist has to be repopulated upon any remount, otherwise dev_t
+// and ino will be out of sync
 
 long my_sys_open(const char __user *filename, int flags, int mode) {
     long ret;
-	struct kstat *stat;
-	stat = kmalloc(sizeof (struct kstat), GFP_KERNEL);
+	struct kstat stat;
+	// struct kstat *stat;
+	// stat = kmalloc(sizeof (struct kstat), GFP_KERNEL);
 
-	vfs_stat(filename, stat);
+	vfs_stat(filename, &stat);
 
-	if (!stat) {
-		/* the allocation failed - handle appropriately */
-		printk(KERN_DEBUG "failed allocate memory QQ");
-	}
+	/* if (!stat) { */
+	/* 	/\* the allocation failed - handle appropriately *\/ */
+	/* 	printk(KERN_DEBUG "failed allocate memory QQ"); */
+	/* } */
 	
 	ret = call_sys_open(filename, flags, mode);
 	
-	if (is_inode_blacklisted( &(stat->ino) )) {
-		printk(KERN_DEBUG "file %s has been opened with mode %d, ino %llu", filename, mode, stat->ino);
+	if (is_kstat_blacklisted(&stat)) {
+		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
 	}
 
-	kfree(stat);
+	// kfree(stat);
 
 	return ret;
 }
@@ -57,7 +50,7 @@ static int __init syscall_init(void)
 
 	printk(KERN_DEBUG "syscall_init\n");
 
-	ret = inode_blacklist_init_populate(blaclisted_inodes, sizeof(blaclisted_inodes) / sizeof(u64));
+	ret = kstat_blacklist_init_populate(blacklisted_stats, sizeof(blacklisted_stats) / sizeof(struct kstat));
 
 	if (ret) {
 		printk(KERN_DEBUG "failed to initialize blacklist_collection");
@@ -71,7 +64,7 @@ static void __exit syscall_release(void)
 {
 	printk(KERN_DEBUG "syscall de-init\n");
 
-	inode_blacklist_destroy();
+	kstat_blacklist_destroy();
 	restore_sys_open();
 }
 

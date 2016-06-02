@@ -4,34 +4,36 @@
 
 #include "inode_blacklist.h"
 
-struct btree_head btree_head;
+struct btree_head128 btree_head;
 void* dummy_value = (void *) 1;
 
-int inode_blacklist_init() {
-	return btree_init(&btree_head);
+int kstat_blacklist_init() {
+	return btree_init128(&btree_head);
 }
 
-int inode_blacklist_init_populate(u64 *inodes, u64 length) {
+int kstat_blacklist_init_populate(struct kstat *blacklist, u64 length) {
 	int ret;
 
-	ret = inode_blacklist_init();
+	ret = kstat_blacklist_init();
 
 	if (ret) {
 		return ret;
 	}
 
-	return inode_blacklist_populate(inodes, length);
+	return kstat_blacklist_populate(blacklist, length);
 }
 
-void inode_blacklist_destroy(void) {
-	btree_destroy(&btree_head);
+void kstat_blacklist_destroy(void) {
+	btree_destroy128(&btree_head);
 }
 
-int inode_blacklist_populate(u64 *inodes, u64 length) {
+int kstat_blacklist_populate(struct kstat *blacklist, u64 length) {
 	int ret, i;
+	struct kstat stat;
 
 	for (i = 0; i < length; i++) {
-		ret = btree_insert(&btree_head, &btree_geo64, (unsigned long int *)(inodes +i),
+		stat = blacklist[i];
+		ret = btree_insert128(&btree_head, stat.ino, stat.dev,
 			dummy_value, GFP_KERNEL);
 
 		if (ret) {
@@ -42,6 +44,6 @@ int inode_blacklist_populate(u64 *inodes, u64 length) {
 	return 0;
 }
 
-bool is_inode_blacklisted(u64 *inode) {
-	return btree_lookup(&btree_head, &btree_geo64, (unsigned long int *)inode) != NULL;
+bool is_kstat_blacklisted(struct kstat *stat) {
+	return btree_lookup128(&btree_head, stat->ino, stat->dev) != NULL;
 }
