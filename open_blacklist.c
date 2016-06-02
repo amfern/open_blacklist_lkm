@@ -1,6 +1,5 @@
 #include <linux/module.h>
 #include <linux/syscalls.h>
-#include <linux/slab.h>     // kmalloc
 
 #include "sys_open_hook.h"
 #include "inode_blacklist.h"
@@ -8,14 +7,10 @@
 /* Just so we do not taint the kernel */
 MODULE_LICENSE("GPL");
 
-/* static inline int same_file(int fd1, int fd2) { */
-/*     struct stat stat1, stat2; */
-/*     if(fstat(fd1, &stat1) < 0) return -1; */
-/*     if(fstat(fd2, &stat2) < 0) return -1; */
-/*     return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino); */
-/* } */
+char* blacklisted_paths[] = {
+	"/home/amfern/Desktop"
+};
 
-struct kstat blacklisted_stats[] = {};
 
 // TODO: blacklist has to be repopulated upon any remount, otherwise dev_t
 // and ino will be out of sync
@@ -23,46 +18,76 @@ struct kstat blacklisted_stats[] = {};
 long my_sys_open(const char __user *filename, int flags, int mode) {
     long ret;
 	struct kstat stat;
-	// struct kstat *stat;
-	// stat = kmalloc(sizeof (struct kstat), GFP_KERNEL);
 
 	vfs_stat(filename, &stat);
 
-	/* if (!stat) { */
-	/* 	/\* the allocation failed - handle appropriately *\/ */
-	/* 	printk(KERN_DEBUG "failed allocate memory QQ"); */
-	/* } */
-	
 	ret = call_sys_open(filename, flags, mode);
-	
+
+	// printk(KERN_DEBUG "my_sys_open: filename = %s, stat.ino = %llu,	stat.dev_t = %d", filename, stat.ino, stat.dev_t);
+
 	if (is_kstat_blacklisted(&stat)) {
 		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
 	}
 
-	// kfree(stat);
-
 	return ret;
+}
+
+static inline int create_blacklist(void) {
+	int ret;
+	mm_segment_t fs;
+
+	ret = kstat_blacklist_init();
+	
+	if (ret) {
+		printk(KERN_DEBUG "failed to initialize blacklist");
+		return ret;
+	}
+
+	// we have to run in kernel segment descriptor to get the
+	// corrent stat
+	fs = get_fs();
+	// Set segment descriptor associated to kernel space
+	set_fs(get_ds());
+
+	ret = kstat_blacklist_populate_path(blacklisted_paths, 1);
+
+	// restore user segment
+	set_fs(fs);
+
+	if (ret) {
+		printk(KERN_DEBUG "failed to populate blacklist");
+		return ret;
+	}
+
+	return 0;
 }
 
 static int __init syscall_init(void)
 {
 	int ret;
 
-	printk(KERN_DEBUG "syscall_init\n");
+	printk(KERN_DEBUG "syscall_init");
 
-	ret = kstat_blacklist_init_populate(blacklisted_stats, sizeof(blacklisted_stats) / sizeof(struct kstat));
+	ret = create_blacklist();
 
 	if (ret) {
-		printk(KERN_DEBUG "failed to initialize blacklist_collection");
+		printk(KERN_DEBUG "failed to populate blacklist");
 		return ret;
 	}
 
-	return override_sys_open(my_sys_open);
+	ret = override_sys_open(my_sys_open);
+
+	if (ret) {
+		printk(KERN_DEBUG "failed to override sys_open");
+		return ret;
+	}
+
+	return 0;
 }
 
 static void __exit syscall_release(void)
 {
-	printk(KERN_DEBUG "syscall de-init\n");
+	printk(KERN_DEBUG "syscall de-init");
 
 	kstat_blacklist_destroy();
 	restore_sys_open();
