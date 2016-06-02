@@ -9,34 +9,10 @@
 #include <linux/slab.h>     // kmalloc
 #include <linux/kallsyms.h>
 
-#define CR0_WP 0x00010000   // Write Protect Bit (CR0:16)
+#include "sys_open_hook.h"
 
 /* Just so we do not taint the kernel */
 MODULE_LICENSE("GPL");
-
-void **syscall_table;
-unsigned long **find_sys_call_table(void);
-
-long (*orig_sys_open)(const char __user *filename, int flags, int mode);
-
-/* Make the page writable */
-static inline int make_rw(unsigned long address)
-{
-	unsigned int level;
-	pte_t *pte = lookup_address(address, &level);
-	if(pte->pte &~ _PAGE_RW)
-		pte->pte |= _PAGE_RW;
-	return 0;
-}
-
-/* Make the page write protected */
-static inline int make_ro(unsigned long address)
-{
-	unsigned int level;
-	pte_t *pte = lookup_address(address, &level);
-	pte->pte = pte->pte &~ _PAGE_RW;
-	return 0;
-}
 
 /* static inline int same_file(int fd1, int fd2) { */
 /*     struct stat stat1, stat2; */
@@ -44,32 +20,6 @@ static inline int make_ro(unsigned long address)
 /*     if(fstat(fd2, &stat2) < 0) return -1; */
 /*     return (stat1.st_dev == stat2.st_dev) && (stat1.st_ino == stat2.st_ino); */
 /* } */
-
-/**
- * Addresses in my System.map file
- * ffffffff81175dc0 T sys_close
- * ffffffff81801300 R sys_call_table
- * ffffffff81c0f3a0 D loops_per_jiffy
- */
-unsigned long **find_sys_call_table() {
-    
-    unsigned long ptr;
-    unsigned long *p;
-
-    for (ptr = (unsigned long)sys_close;
-         ptr < (unsigned long)&loops_per_jiffy;
-         ptr += sizeof(void *)) {
-             
-        p = (unsigned long *)ptr;
-
-        if (p[__NR_close] == (unsigned long)sys_close) {
-            printk(KERN_DEBUG "Found the sys_call_table!!!\n");
-            return (unsigned long **)p;
-        }
-    }
-    
-    return NULL;
-}
 
 long my_sys_open(const char __user *filename, int flags, int mode) {
     long ret;
@@ -83,14 +33,7 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 		printk(KERN_DEBUG "failed allocate memory QQ");
 	}
 	
-    // if(fstat(fd1, &stat) < 0) return -1;
-	// nameidata *nd;
-
-	// this will also cache the inode for orig_sys_open
-	// open_namei(filename, flags, mode, nd);
-
-	// ret is a filedescriptor
-	ret = orig_sys_open(filename, flags, mode);
+	ret = call_sys_open(filename, flags, mode);
     printk(KERN_DEBUG "file %s has been opened with mode %d\n, ino %llu", filename, mode, stat->ino);
 
 	kfree(stat);
@@ -100,55 +43,16 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 
 static int __init syscall_init(void)
 {
-    int ret;
-    unsigned long addr;
-    unsigned long cr0;
-  
-    syscall_table = (void **)find_sys_call_table();
+	printk(KERN_DEBUG "syscall_init\n"); 
 
-    if (!syscall_table) {
-        printk(KERN_DEBUG "Cannot find the system call address\n"); 
-        return -1;
-    }
-
-    cr0 = read_cr0();
-    write_cr0(cr0 & ~CR0_WP);
-
-    addr = (unsigned long)syscall_table;
-	ret = make_rw(addr);
-    // ret = set_memory_rw(PAGE_ALIGN(addr) - PAGE_SIZE, 3);
-    if(ret) {
-        printk(KERN_DEBUG "Cannot set the memory to rw (%d) at addr %16lX\n", ret, PAGE_ALIGN(addr) - PAGE_SIZE);
-    } else {
-        printk(KERN_DEBUG "3 pages set to rw"); // TODO: not anymore
-    }
-    
-    orig_sys_open = syscall_table[__NR_open];
-    syscall_table[__NR_open] = my_sys_open;
-	
-	ret = make_ro(addr); // TODO: check return value
-
-	if(ret) {
-        printk(KERN_DEBUG "Cannot set the memory to ro (%d) at addr %16lX\n", ret, PAGE_ALIGN(addr) - PAGE_SIZE);
-    } else {
-        printk(KERN_DEBUG "3 pages set to rw"); // TODO: not anymore
-    }
-
-    write_cr0(cr0);
-  
-    return 0;
+	return override_sys_open(my_sys_open);
 }
 
 static void __exit syscall_release(void)
 {
-    unsigned long cr0;
-    
-    cr0 = read_cr0();
-    write_cr0(cr0 & ~CR0_WP);
-    
-    syscall_table[__NR_open] = orig_sys_open;
-    
-    write_cr0(cr0);
+	printk(KERN_DEBUG "syscall de-init\n"); 
+
+	restore_sys_open();
 }
 
 module_init(syscall_init);

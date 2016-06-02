@@ -1,4 +1,9 @@
-obj-m += open_blacklist.o
+# ccflags-y :=  -I$(src)
+
+obj-m := blacklist.o
+blacklist-objs := sys_open_hook.o open_blacklist.o
+
+# open_blacklist-y := sys_open_hook.o
 
 all:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
