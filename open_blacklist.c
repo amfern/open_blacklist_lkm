@@ -1,13 +1,6 @@
 #include <linux/module.h>
-#include <linux/init.h>
-#include <linux/types.h>
-#include <asm/uaccess.h>
-#include <asm/cacheflush.h>
 #include <linux/syscalls.h>
-#include <linux/delay.h>    // loops_per_jiffy
-#include <linux/fs.h>
 #include <linux/slab.h>     // kmalloc
-#include <linux/kallsyms.h>
 
 #include "sys_open_hook.h"
 
