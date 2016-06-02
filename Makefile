@@ -1,7 +1,10 @@
 # ccflags-y :=  -I$(src)
 
 obj-m := blacklist.o
-blacklist-objs := sys_open_hook.o open_blacklist.o
+blacklist-objs := \
+	inode_blacklist.o \
+	sys_open_hook.o \
+	open_blacklist.o
 
 # open_blacklist-y := sys_open_hook.o
 
