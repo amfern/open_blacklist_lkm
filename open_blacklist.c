@@ -1,6 +1,7 @@
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/syscalls.h>
+#include <linux/slab.h>     // kmalloc
 
 #include "types.h"
 #include "sys_open_hook.h"
@@ -37,17 +38,29 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 
 static inline int kstat_blacklist_populate(struct kstat_tree_head *tree, struct list_head *blacklist) {
 	int ret;
-	struct kstat stat;
+	struct kstat* stat;
 	struct blacklist_entry *entry;
+	mm_segment_t fs;
 
 	list_for_each_entry(entry, blacklist, next) {
-		// stat = kmalloc(sizeof(struct kstat), GFP_KERNEL);
+		stat = kmalloc(sizeof(struct kstat), GFP_KERNEL);
 
-		vfs_stat(entry->buf, &stat); // TODO: what suppose the return value represent?
-		printk(KERN_DEBUG "kstat_blacklist_populate: entry->buf = %s, stat.ino = %llu, stat.dev = %d", entry->buf, stat.ino, stat.dev);
-		ret = kstat_tree_insert(tree, &stat);
+		// we have to run in kernel segment descriptor to get the
+		// corrent stat
+		fs = get_fs();
+		// Set segment descriptor associated to kernel space
+		set_fs(get_ds());
+
+		vfs_stat(entry->buf, stat); // TODO: what suppose the return
+									 // value represent?
+		// restore user segment
+		set_fs(fs);
+
+		printk(KERN_DEBUG "kstat_blacklist_populate: entry->buf = %s, stat.ino = %llu, stat.dev = %d", entry->buf, stat->ino, stat->dev);
+		ret = kstat_tree_insert(tree, stat);
 
 		if (ret) {
+			printk(KERN_DEBUG "Failed to insert kstat, maybe duplicate?");
 			return ret;
 		}
 	}
@@ -57,16 +70,9 @@ static inline int kstat_blacklist_populate(struct kstat_tree_head *tree, struct 
 
 static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
 	int ret;
-	mm_segment_t fs;
 
 	LIST_HEAD(blacklist); // TODO: release the list, look how other
 						  // doing it
-	// we have to run in kernel segment descriptor to get the
-	// corrent stat
-	fs = get_fs();
-	// Set segment descriptor associated to kernel space
-	set_fs(get_ds());
-
 	// parse file and return blacklist of type list
 	parse_blacklist_file(blacklist_file, &blacklist);
 
@@ -79,10 +85,8 @@ static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
 	}
 
 	ret = kstat_blacklist_populate(kstat_tree, &blacklist);
-	// ret = kstat_blacklist_populate_path_list(kstat_tree, blacklist);
 
-	// restore user segment
-	set_fs(fs);
+	printk(KERN_DEBUG "tree populated");
 
 	if (ret) {
 		printk(KERN_DEBUG "failed to populate blacklist");
