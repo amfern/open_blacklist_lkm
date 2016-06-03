@@ -6,6 +6,7 @@
 #include "blacklist_parser.h"
 
 // TODO: split this into open func and parsing func
+// TODO: make use of return value
 int parse_blacklist_file(char* blacklist_file, struct list_head *blacklist) {
 	struct file* filp = NULL;
 	char *buf;
@@ -37,7 +38,7 @@ int parse_blacklist_file(char* blacklist_file, struct list_head *blacklist) {
 			goto out_free;
 		}
 
-		// buf[len] = '\0';
+		buf[len] = '\0';
 
 		replace_buf = buf;
 
@@ -51,8 +52,6 @@ int parse_blacklist_file(char* blacklist_file, struct list_head *blacklist) {
 				entry->buf = kmalloc(strlen(buf + 1) + 1, GFP_KERNEL);
 				strcpy(entry->buf, buf + 1);
 				list_add(&entry->next, blacklist);
-
-				// printk(KERN_DEBUG "buffer = %s ###############", buf + 1);
 			} else if (*replace_buf == '<') {
 				buf = replace_buf;
 			}

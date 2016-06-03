@@ -2,15 +2,22 @@
 #define __KSTAT_BLACKLIST_H
 
 #include <linux/stat.h>
+#include <linux/btree.h>
+#include <linux/list.h>
 
-int kstat_blacklist_init(void);
+// TODO: maybe union?
+struct kstat_tree_head {
+	struct btree_head128 btree_head;
+};
 
-void kstat_blacklist_destroy(void);
+int kstat_tree_head_init(struct kstat_tree_head *tree);
 
-int kstat_blacklist_populate(struct kstat *blacklist, u64 length);
+void kstat_blacklist_destroy(struct kstat_tree_head *tree);
 
-int kstat_blacklist_populate_path(char* blacklisted_paths[], u64 length);
+int kstat_blacklist_populate(struct kstat_tree_head *tree, struct kstat *blacklist, u64 length);
 
-bool is_kstat_blacklisted(struct kstat *stat);
+int kstat_blacklist_populate_path(struct kstat_tree_head *tree, char* blacklisted_paths[], u64 length);
+
+bool is_kstat_blacklisted(struct kstat_tree_head *tree, struct kstat *stat);
 
 #endif

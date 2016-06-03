@@ -11,6 +11,7 @@
 MODULE_LICENSE("GPL");
 
 static char *blacklist_file = "blah";
+static struct kstat_tree_head kstat_tree_blacklist;
 
 module_param(blacklist_file, charp, 0000);
 MODULE_PARM_DESC(blacklist_file, "File listing the blacklisted paths");
@@ -32,19 +33,19 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 	// the return from call_sys_open is file descriptor
 	vfs_fstat(ret, &stat);
 
-	if (is_kstat_blacklisted(&stat)) {
+	if (is_kstat_blacklisted(&kstat_tree_blacklist, &stat)) {
 		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
 	}
 
 	return ret;
 }
 
-static inline int create_blacklist(void) {
-	// int ret;
+static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
+	int ret;
 	mm_segment_t fs;
-	LIST_HEAD(blacklist);
-	KSTAT_TREE(kstat_tree);
-	
+
+	LIST_HEAD(blacklist); // TODO: release the list, look how other
+						  // doing it
 	// we have to run in kernel segment descriptor to get the
 	// corrent stat
 	fs = get_fs();
@@ -59,22 +60,23 @@ static inline int create_blacklist(void) {
 	// rename to kstat_tree
 	// kstat tree should operate on pointer we poses
 	
-	/* ret = kstat_blacklist_init(); */
-	
-	/* if (ret) { */
-	/* 	printk(KERN_DEBUG "failed to initialize blacklist"); */
-	/* 	return ret; */
-	/* } */
+	ret = kstat_tree_head_init(kstat_tree);
 
-	/* ret = kstat_blacklist_populate_path(blacklisted_paths, 1); */
+	if (ret) {
+		printk(KERN_DEBUG "failed to initialize blacklist");
+		return ret;
+	}
+
+	ret = kstat_blacklist_populate_path(kstat_tree, blacklisted_paths, 1);
+	// ret = kstat_blacklist_populate_path_list(kstat_tree, blacklist);
 
 	// restore user segment
 	set_fs(fs);
 
-	/* if (ret) { */
-	/* 	printk(KERN_DEBUG "failed to populate blacklist"); */
-	/* 	return ret; */
-	/* } */
+	if (ret) {
+		printk(KERN_DEBUG "failed to populate blacklist");
+		return ret;
+	}
 
 	return 0;
 }
@@ -85,7 +87,7 @@ static int __init syscall_init(void)
 
 	printk(KERN_DEBUG "syscall_init");
 
-	ret = create_blacklist();
+	ret = create_blacklist(&kstat_tree_blacklist);
 
 	if (ret) {
 		printk(KERN_DEBUG "failed to populate blacklist");
@@ -106,7 +108,7 @@ static void __exit syscall_release(void)
 {
 	printk(KERN_DEBUG "syscall de-init");
 
-	// kstat_blacklist_destroy();
+	kstat_blacklist_destroy(&kstat_tree_blacklist);
 	restore_sys_open();
 }
 
