@@ -20,10 +20,6 @@ struct kstat* kstat_tree_remove(struct kstat_tree_head *tree, struct kstat *stat
 
 struct kstat* kstat_tree_lookup(struct kstat_tree_head *tree, struct kstat *stat);
 
-int kstat_blacklist_populate(struct kstat_tree_head *tree, struct kstat *blacklist, u64 length);
-
-int kstat_blacklist_populate_path(struct kstat_tree_head *tree, char* blacklisted_paths[], u64 length);
-
 static inline bool kstat_tree_contain(struct kstat_tree_head *tree, struct kstat *stat) {
 	return kstat_tree_lookup(tree, stat) != NULL;
 }

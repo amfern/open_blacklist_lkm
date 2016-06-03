@@ -16,11 +16,6 @@ static struct kstat_tree_head kstat_tree_blacklist;
 module_param(blacklist_file, charp, 0000);
 MODULE_PARM_DESC(blacklist_file, "File listing the blacklisted paths");
 
-char* blacklisted_paths[] = {
-	"/home/amfern/Desktop"
-};
-
-
 // TODO: blacklist has to be repopulated upon any remount, otherwise dev_t
 // and ino will be out of sync
 
@@ -38,6 +33,26 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 	}
 
 	return ret;
+}
+
+static inline int kstat_blacklist_populate(struct kstat_tree_head *tree, struct list_head *blacklist) {
+	int ret;
+	struct kstat stat;
+	struct blacklist_entry *entry;
+
+	list_for_each_entry(entry, blacklist, next) {
+		// stat = kmalloc(sizeof(struct kstat), GFP_KERNEL);
+
+		vfs_stat(entry->buf, &stat); // TODO: what suppose the return value represent?
+		printk(KERN_DEBUG "kstat_blacklist_populate: entry->buf = %s, stat.ino = %llu, stat.dev = %d", entry->buf, stat.ino, stat.dev);
+		ret = kstat_tree_insert(tree, &stat);
+
+		if (ret) {
+			return ret;
+		}
+	}
+
+	return 0;
 }
 
 static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
@@ -63,7 +78,7 @@ static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
 		return ret;
 	}
 
-	ret = kstat_blacklist_populate_path(kstat_tree, blacklisted_paths, 1);
+	ret = kstat_blacklist_populate(kstat_tree, &blacklist);
 	// ret = kstat_blacklist_populate_path_list(kstat_tree, blacklist);
 
 	// restore user segment
