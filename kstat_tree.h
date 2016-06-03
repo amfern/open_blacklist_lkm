@@ -12,12 +12,20 @@ struct kstat_tree_head {
 
 int kstat_tree_head_init(struct kstat_tree_head *tree);
 
-void kstat_blacklist_destroy(struct kstat_tree_head *tree);
+void kstat_tree_destroy(struct kstat_tree_head *tree);
+
+int kstat_tree_insert(struct kstat_tree_head *tree, struct kstat *stat);
+
+struct kstat* kstat_tree_remove(struct kstat_tree_head *tree, struct kstat *stat);
+
+struct kstat* kstat_tree_lookup(struct kstat_tree_head *tree, struct kstat *stat);
 
 int kstat_blacklist_populate(struct kstat_tree_head *tree, struct kstat *blacklist, u64 length);
 
 int kstat_blacklist_populate_path(struct kstat_tree_head *tree, char* blacklisted_paths[], u64 length);
 
-bool is_kstat_blacklisted(struct kstat_tree_head *tree, struct kstat *stat);
+static inline bool kstat_tree_contain(struct kstat_tree_head *tree, struct kstat *stat) {
+	return kstat_tree_lookup(tree, stat) != NULL;
+}
 
 #endif

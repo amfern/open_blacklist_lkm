@@ -33,7 +33,7 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 	// the return from call_sys_open is file descriptor
 	vfs_fstat(ret, &stat);
 
-	if (is_kstat_blacklisted(&kstat_tree_blacklist, &stat)) {
+	if (kstat_tree_contain(&kstat_tree_blacklist, &stat)) {
 		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
 	}
 
@@ -104,7 +104,7 @@ static void __exit syscall_release(void)
 {
 	printk(KERN_DEBUG "syscall de-init");
 
-	kstat_blacklist_destroy(&kstat_tree_blacklist);
+	kstat_tree_destroy(&kstat_tree_blacklist);
 	restore_sys_open();
 }
 
