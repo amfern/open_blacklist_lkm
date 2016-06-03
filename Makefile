@@ -2,6 +2,7 @@ obj-m := blacklist.o
 blacklist-objs := \
 	kstat_blacklist.o \
 	sys_open_hook.o \
+	blacklist_parser.o \
 	open_blacklist.o
 
 # open_blacklist-y := sys_open_hook.o
