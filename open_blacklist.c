@@ -19,11 +19,9 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
     long ret;
 	struct kstat stat;
 
-	vfs_stat(filename, &stat);
-
 	ret = call_sys_open(filename, flags, mode);
 
-	// printk(KERN_DEBUG "my_sys_open: filename = %s, stat.ino = %llu,	stat.dev_t = %d", filename, stat.ino, stat.dev_t);
+	vfs_fstat(ret, &stat);
 
 	if (is_kstat_blacklisted(&stat)) {
 		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
