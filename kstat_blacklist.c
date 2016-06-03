@@ -39,9 +39,10 @@ int kstat_blacklist_populate(struct kstat *blacklist, u64 length) {
 int kstat_blacklist_populate_path(char* blacklisted_paths[], u64 length) {
 	// int ret;
 	u64 i;
-	struct kstat blacklisted_stats[length];
+	struct kstat *blacklisted_stats;
 	struct kstat *stat;
 
+	blacklisted_stats = kmalloc_array(length ,sizeof(struct kstat), GFP_KERNEL);
 	for (i = 0; i < length; i++) {
 		stat = &blacklisted_stats[i];
 		
@@ -52,6 +53,8 @@ int kstat_blacklist_populate_path(char* blacklisted_paths[], u64 length) {
 	}
 
 	kstat_blacklist_populate(blacklisted_stats, length);
+
+	kfree(blacklisted_stats);
 
 	return 0;
 }
