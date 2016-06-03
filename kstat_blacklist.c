@@ -3,7 +3,7 @@
 #include <linux/slab.h>     // kmalloc
 #include <linux/syscalls.h>
 
-#include "inode_blacklist.h"
+#include "kstat_blacklist.h"
 
 struct btree_head128 btree_head;
 void* dummy_value = (void *) 1;

@@ -2,7 +2,7 @@
 #include <linux/syscalls.h>
 
 #include "sys_open_hook.h"
-#include "inode_blacklist.h"
+#include "kstat_blacklist.h"
 
 /* Just so we do not taint the kernel */
 MODULE_LICENSE("GPL");

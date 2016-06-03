@@ -2,7 +2,7 @@
 
 obj-m := blacklist.o
 blacklist-objs := \
-	inode_blacklist.o \
+	kstat_blacklist.o \
 	sys_open_hook.o \
 	open_blacklist.o
 
