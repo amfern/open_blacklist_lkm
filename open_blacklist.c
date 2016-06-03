@@ -52,14 +52,10 @@ static inline int create_blacklist(struct kstat_tree_head *kstat_tree) {
 	// Set segment descriptor associated to kernel space
 	set_fs(get_ds());
 
-// 1. parse file and return blacklist of type list
+	// parse file and return blacklist of type list
 	parse_blacklist_file(blacklist_file, &blacklist);
 
-
-// 2. create kstat tree from the blacklist
-	// rename to kstat_tree
-	// kstat tree should operate on pointer we poses
-	
+	// create kstat tree from the blacklist
 	ret = kstat_tree_head_init(kstat_tree);
 
 	if (ret) {
@@ -94,12 +90,12 @@ static int __init syscall_init(void)
 		return ret;
 	}
 
-	/* ret = override_sys_open(my_sys_open); */
+	ret = override_sys_open(my_sys_open);
 
-	/* if (ret) { */
-	/* 	printk(KERN_DEBUG "failed to override sys_open"); */
-	/* 	return ret; */
-	/* } */
+	if (ret) {
+		printk(KERN_DEBUG "failed to override sys_open");
+		return ret;
+	}
 
 	return 0;
 }
