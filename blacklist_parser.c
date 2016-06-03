@@ -5,6 +5,7 @@
 #include <linux/types.h>
 #include <linux/fs.h>
 #include <linux/file.h>
+#include <linux/vmalloc.h>
 
 #include "types.h"
 #include "blacklist_parser.h"
@@ -102,8 +103,6 @@ int kernel_read_file_from_path(char *path, void **buf, loff_t *size, loff_t max_
 	if (IS_ERR(file))
 		return PTR_ERR(file);
 
-	printk(KERN_DEBUG "parsed BBB");
-
 	ret = kernel_read_file(file, buf, size, max_size);
 	fput(file);
 	return ret;
@@ -167,8 +166,6 @@ int parse_blacklist_file(char* blacklist_file, struct list_head *blacklist) {
 		// update the total size left
 		size -= rc;
 	}
-
-	printk(KERN_DEBUG "inb4 vfree(data);");
 
 	vfree(data);
 	if (rc < 0)

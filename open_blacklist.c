@@ -51,8 +51,12 @@ static inline int kstat_blacklist_populate(struct kstat_tree_head *tree, struct 
 		// Set segment descriptor associated to kernel space
 		set_fs(get_ds());
 
-		vfs_stat(entry->buf, stat); // TODO: what suppose the return
-									 // value represent?
+		ret = vfs_stat(entry->buf, stat);
+
+		if (ret) {
+			printk(KERN_DEBUG "failed to open file: %s", entry->buf);
+		}
+
 		// restore user segment
 		set_fs(fs);
 
