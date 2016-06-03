@@ -4,7 +4,7 @@
 
 #include "types.h"
 #include "sys_open_hook.h"
-#include "kstat_blacklist.h"
+#include "kstat_tree.h"
 #include "blacklist_parser.h"
 
 /* Just so we do not taint the kernel */

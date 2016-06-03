@@ -1,6 +1,6 @@
 obj-m := blacklist.o
 blacklist-objs := \
-	kstat_blacklist.o \
+	kstat_tree.o \
 	sys_open_hook.o \
 	blacklist_parser.o \
 	open_blacklist.o

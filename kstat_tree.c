@@ -2,7 +2,7 @@
 #include <linux/slab.h>     // kmalloc
 #include <linux/syscalls.h>
 
-#include "kstat_blacklist.h"
+#include "kstat_tree.h"
 
 
 void* dummy_value = (void *) 1;
