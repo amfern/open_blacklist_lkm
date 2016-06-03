@@ -31,6 +31,7 @@ long my_sys_open(const char __user *filename, int flags, int mode) {
 
 	if (kstat_tree_contain(&kstat_tree_blacklist, &stat)) {
 		printk(KERN_DEBUG "file %s has been opened with mode %d", filename, mode);
+		return -EACCES;
 	}
 
 	return ret;
